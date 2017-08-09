@@ -1,1 +1,7 @@
 project.lock.json
+
+# local developement directories should be ignored
+
+**/.vs/
+**/bin/
+**/obj/

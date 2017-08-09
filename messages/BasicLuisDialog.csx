@@ -21,13 +21,6 @@ public class BasicLuisDialog : LuisDialog<object>
         context.Wait(MessageReceived);
     }
     
-    [LuisIntent("greeings")]
-    public async Task GreetingsIntent(IDialogContext context, LuisResult result)
-    {
-        await context.PostAsync($"You have reached the greetings intent. You said: {result.Query}"); //
-        context.Wait(MessageReceived);
-    }
-    
     // Go to https://luis.ai and create a new intent, then train/publish your luis app.
     // Finally replace "MyIntent" with the name of your newly created intent in the following handler
     [LuisIntent("BookFlight")]
@@ -48,6 +41,13 @@ public class BasicLuisDialog : LuisDialog<object>
     public async Task HomeAutomationTurnOnIntent(IDialogContext context, LuisResult result)
     {
         await context.PostAsync($"You have reached the HomeAutomation.TurnOn intent. You said: {result.Query}"); //
+        context.Wait(MessageReceived);
+    }
+
+    [LuisIntent("HomeAutomation.TurnOff")]
+    public async Task HomeAutomationTurnOffIntent(IDialogContext context, LuisResult result)
+    {
+        await context.PostAsync($"You have reached the HomeAutomation.TurnOff intent. You said: {result.Query}"); //
         context.Wait(MessageReceived);
     }
 }
