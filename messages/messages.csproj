@@ -7,7 +7,7 @@
 
   <ItemGroup>
       <PackageReference Include="Microsoft.Bot.Builder.Azure">
-      <Version>3.1</Version>
+      <Version>3.2.2</Version>
     </PackageReference>
   </ItemGroup>
 
