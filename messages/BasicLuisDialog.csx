@@ -14,10 +14,10 @@ public class BasicLuisDialog : LuisDialog<object>
     public BasicLuisDialog() : base(new LuisService(new LuisModelAttribute(Utils.GetAppSetting("LuisAppId"), Utils.GetAppSetting("LuisAPIKey"))))
     {
     }
-    
 
     private string deviceEntity;
 
+    #region Intent Handler
     [LuisIntent("")]
     public async Task NoneIntent(IDialogContext context, LuisResult result)
     {
@@ -36,18 +36,34 @@ public class BasicLuisDialog : LuisDialog<object>
         context.Wait(MessageReceived);
     }
 
-    [LuisIntent("GetWeather")]
-    public async Task GetWeatherIntent(IDialogContext context, LuisResult result)
+    [LuisIntent("Weather.GetForecast")]
+    public async Task GetWeatherForecastIntent(IDialogContext context, LuisResult result)
     {
-        await context.PostAsync($"You have reached the GetWeather intent. You said: {result.Query}"); //
+        await context.PostAsync($"You have reached the Weather.GetForecast intent. You said: {result.Query}"); //
+        context.Wait(MessageReceived);
+    }
+
+    [LuisIntent("Weather.GetCondition")]
+    public async Task GetWeatherConditionIntent(IDialogContext context, LuisResult result)
+    {
+        await context.PostAsync($"You have reached the Weather.GetCondition intent. You said: {result.Query}"); //
         context.Wait(MessageReceived);
     }
 
     [LuisIntent("HomeAutomation.TurnOn")]
     public async Task HomeAutomationTurnOnIntent(IDialogContext context, LuisResult result)
     {
-        await context.PostAsync($"You have reached the HomeAutomation.TurnOn intent. You said: {result.Query}"); //
-        context.Wait(MessageReceived);
+        await context.PostAsync($"You have reached the HomeAutomation.TurnOn intent. You said: {result.Query}");
+
+        if (TryFindEntity(result, "HomeAutomation.Device", out this.deviceEntity))
+        {
+            PromptDialog.Confirm(context, AfterConfirming_TurnOn, "Are you sure?", promptStyle: PromptStyle.Auto);
+        }
+        else
+        {
+            await context.PostAsync($"Did not find the object to be turned on: {result.Query}");
+            context.Wait(MessageReceived);
+        }
     }
 
     [LuisIntent("HomeAutomation.TurnOff")]
@@ -64,6 +80,22 @@ public class BasicLuisDialog : LuisDialog<object>
             await context.PostAsync($"Did not find the object to be turned off: {result.Query}");
             context.Wait(MessageReceived);
         }
+    }
+    #endregion
+
+    #region Action and Reply
+    private async Task AfterConfirming_TurnOn(IDialogContext context, IAwaitable<bool> confirmation)
+    {
+        if (await confirmation)
+        {
+            await context.PostAsync($"Ok, turn on {this.deviceEntity} successfully.");
+        }
+        else
+        {
+            await context.PostAsync($"Ok! We haven't turned of {this.deviceEntity}!");
+        }
+
+        context.Wait(MessageReceived);
     }
 
     private async Task AfterConfirming_TurnOff(IDialogContext context, IAwaitable<bool> confirmation)
@@ -94,4 +126,5 @@ public class BasicLuisDialog : LuisDialog<object>
             return false;
         }
     }
+    #endregion
 }
