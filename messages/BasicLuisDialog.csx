@@ -1,3 +1,5 @@
+#load "OpenWeatherResponse.csx"
+
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -5,20 +7,29 @@ using Microsoft.Bot.Builder.Azure;
 using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Builder.Luis;
 using Microsoft.Bot.Builder.Luis.Models;
+using Newtonsoft.Json;
 
 // For more information about this template visit http://aka.ms/azurebots-csharp-luis
-//[LuisModel("9a002f0f-9a17-4f23-8c0c-fac8d0bf3f20", "c043256de3914185a74eea8fc16d0ef5", domain: "westus.api.cognitive.microsoft.com")]
+[LuisModel("9a002f0f-9a17-4f23-8c0c-fac8d0bf3f20", "c043256de3914185a74eea8fc16d0ef5", domain: "westus.api.cognitive.microsoft.com")]
 [Serializable]
 public class BasicLuisDialog : LuisDialog<object>
 {
+    /*
     public BasicLuisDialog() : base(new LuisService(new LuisModelAttribute(Utils.GetAppSetting("LuisAppId"), Utils.GetAppSetting("LuisAPIKey"))))
     {
     }
+    */
+
+    private static readonly string currentWeatherReplyTemplate = "Hello, it's {0} in {1} with temprature {2} degree centigrade.";
+    private static readonly string weatherForecastReplyTemplate = "Hello, for {0}, it'll be {1} in {2}..with low temperature at {3} and high at {4}.";
+    private static readonly string yesWeatherTemplate = "Hi..actually yes, it's {0} in {1}";
+    private static readonly string noWeatherTemplate = "Hi..actually no, it's {0} in {1}";
 
     private string deviceEntity;
+    private string weatherLocation;
 
     #region Intent Handler
-    [LuisIntent("")]
+    [LuisIntent("None")]
     public async Task NoneIntent(IDialogContext context, LuisResult result)
     {
         string message = $"Sorry I did not understand: " + string.Join(", ", result.Intents.Select(i => i.Intent));
@@ -39,21 +50,61 @@ public class BasicLuisDialog : LuisDialog<object>
     [LuisIntent("Weather.GetForecast")]
     public async Task GetWeatherForecastIntent(IDialogContext context, LuisResult result)
     {
-        await context.PostAsync($"You have reached the Weather.GetForecast intent. You said: {result.Query}"); //
+        await context.PostAsync($"Your intent: Weather.GetForecast.");
+
+        string city;
+        if (TryFindEntity(result, "Weather.Location", out city))
+        {
+            var weatherResponse = await this.GetCurrentWeatherByCityName(city);
+            string replyMessage = string.Format(currentWeatherReplyTemplate,
+                weatherResponse.Summary,
+                weatherResponse.City,
+                weatherResponse.Temp);
+            await context.PostAsync(replyMessage);
+        }
+        else
+        {
+            await context.PostAsync("Sorry, no information!");
+        }
+
         context.Wait(MessageReceived);
     }
 
     [LuisIntent("Weather.GetCondition")]
     public async Task GetWeatherConditionIntent(IDialogContext context, LuisResult result)
     {
-        await context.PostAsync($"You have reached the Weather.GetCondition intent. You said: {result.Query}"); //
+        await context.PostAsync($"Your intent: Weather.GetCondition.");
+
+        string city;
+        string condition;
+        if (TryFindEntity(result, "Weather.Location", out city)
+            && TryFindEntity(result, "Weather.Condition", out condition))
+        {
+            string replyMessage;
+
+            var weatherResponse = await this.GetCurrentWeatherByCityName(city);
+            if (weatherResponse.Summary.IndexOf(condition, StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                replyMessage = string.Format(yesWeatherTemplate, condition, weatherResponse.City);
+            }
+            else
+            {
+                replyMessage = string.Format(noWeatherTemplate, weatherResponse.Summary, weatherResponse.City);
+            }
+            await context.PostAsync(replyMessage);
+        }
+        else
+        {
+            await context.PostAsync("Sorry, no information!");
+        }
+
         context.Wait(MessageReceived);
     }
 
     [LuisIntent("HomeAutomation.TurnOn")]
     public async Task HomeAutomationTurnOnIntent(IDialogContext context, LuisResult result)
     {
-        await context.PostAsync($"You have reached the HomeAutomation.TurnOn intent. You said: {result.Query}");
+        await context.PostAsync($"Your intent: HomeAutomation.TurnOn.");
 
         if (TryFindEntity(result, "HomeAutomation.Device", out this.deviceEntity))
         {
@@ -69,7 +120,7 @@ public class BasicLuisDialog : LuisDialog<object>
     [LuisIntent("HomeAutomation.TurnOff")]
     public async Task HomeAutomationTurnOffIntent(IDialogContext context, LuisResult result)
     {
-        await context.PostAsync($"You have reached the HomeAutomation.TurnOff intent. You said: {result.Query}");
+        await context.PostAsync($"Your intent: HomeAutomation.TurnOff.");
 
         if (TryFindEntity(result, "HomeAutomation.Device", out this.deviceEntity))
         {
@@ -110,6 +161,36 @@ public class BasicLuisDialog : LuisDialog<object>
         }
 
         context.Wait(MessageReceived);
+    }
+
+    public async Task<GetCurrentWeatherResponse> GetCurrentWeatherByCityName(string city)
+    {
+        using (var client = new HttpClient())
+        {
+            try
+            {
+                client.BaseAddress = new Uri("http://api.openweathermap.org");
+                HttpResponseMessage response = await client.GetAsync($"/data/2.5/weather?q={city}&units=metric&APPID=d01499238c7a7f3173938f86b7ad1fc8");
+                response.EnsureSuccessStatusCode();
+
+                var stringResult = await response.Content.ReadAsStringAsync();
+
+                var rawWeather = JsonConvert.DeserializeObject<OpenWeatherResponse>(stringResult);
+                string summary = string.Join(",", rawWeather.Weather.Select(x => x.Main));
+
+                return new GetCurrentWeatherResponse
+                {
+                    Temp = rawWeather.Main.Temp,
+                    Summary = string.Join(",", rawWeather.Weather.Select(x => x.Main)),
+                    City = rawWeather.Name
+                };
+            }
+            catch (HttpRequestException httpRequestException)
+            {
+                Console.WriteLine($"Error getting weather from OpenWeather: {httpRequestException.Message}");
+                throw;
+            }
+        }
     }
 
     private bool TryFindEntity(LuisResult result, string entityType, out string entityValue)
