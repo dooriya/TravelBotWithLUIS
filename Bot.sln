@@ -1,9 +1,8 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "Func", "%USERPROFILE%\AppData\Roaming\npm\node_modules\azure-functions-cli\bin\Func.exe", "{C3D4B696-69FC-43D3-9DE6-21FEF4184A2B}"
+Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "func", "..\..\Users\dol\AppData\Roaming\npm\node_modules\azure-functions-cli\bin\func.exe", "{C3D4B696-69FC-43D3-9DE6-21FEF4184A2B}"
 	ProjectSection(DebuggerProjectSystem) = preProject
 		PortSupplier = 00000000-0000-0000-0000-000000000000
 		Executable = Func.exe
@@ -28,6 +27,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "messages", "messages", "{F4
 	ProjectSection(SolutionItems) = preProject
 		messages\BasicLuisDialog.csx = messages\BasicLuisDialog.csx
 		messages\function.json = messages\function.json
+		messages\OpenWeatherResponse.csx = messages\OpenWeatherResponse.csx
 		messages\project.json = messages\project.json
 		messages\project.lock.json = messages\project.lock.json
 		messages\run.csx = messages\run.csx

@@ -8,6 +8,8 @@ using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Builder.Luis;
 using Microsoft.Bot.Builder.Luis.Models;
 using Newtonsoft.Json;
+using System.Net.Http;
+//using Iveonik.Stemmers;
 
 // For more information about this template visit http://aka.ms/azurebots-csharp-luis
 [LuisModel("9a002f0f-9a17-4f23-8c0c-fac8d0bf3f20", "c043256de3914185a74eea8fc16d0ef5", domain: "westus.api.cognitive.microsoft.com")]
@@ -26,7 +28,8 @@ public class BasicLuisDialog : LuisDialog<object>
     private static readonly string noWeatherTemplate = "Hi..actually no, it's {0} in {1}";
 
     private string deviceEntity;
-    private string weatherLocation;
+    private string deviceLocation;
+    private string deviceOperation;
 
     #region Intent Handler
     [LuisIntent("None")]
@@ -44,6 +47,14 @@ public class BasicLuisDialog : LuisDialog<object>
     public async Task BookFlightIntent(IDialogContext context, LuisResult result)
     {
         await context.PostAsync($"You have reached the BookFlight intent. You said: {result.Query}"); //
+        context.Wait(MessageReceived);
+    }
+
+
+    [LuisIntent("greetings")]
+    public async Task GreetingsIntent(IDialogContext context, LuisResult result)
+    {
+        await context.PostAsync($"Your intent: greetings.");
         context.Wait(MessageReceived);
     }
 
@@ -81,6 +92,12 @@ public class BasicLuisDialog : LuisDialog<object>
             && TryFindEntity(result, "Weather.Condition", out condition))
         {
             string replyMessage;
+            /*
+             * Handle condition words with stemmer
+            EnglishStemmer enStemmer = new EnglishStemmer();
+            condition = enStemmer.Stem(condition);
+            condition.Remove(condition.Length - 1);
+            */
 
             var weatherResponse = await this.GetCurrentWeatherByCityName(city);
             if (weatherResponse.Summary.IndexOf(condition, StringComparison.OrdinalIgnoreCase) >= 0)
@@ -106,14 +123,26 @@ public class BasicLuisDialog : LuisDialog<object>
     {
         await context.PostAsync($"Your intent: HomeAutomation.TurnOn.");
 
-        if (TryFindEntity(result, "HomeAutomation.Device", out this.deviceEntity))
+        this.deviceEntity = null;
+        this.deviceLocation = null;
+        this.deviceOperation = null;
+
+        TryFindEntity(result, "HomeAutomation.Device", out this.deviceEntity);
+        TryFindEntity(result, "HomeAutomation.Operation", out this.deviceOperation);
+        TryFindEntity(result, "HomeAutomation.Room", out this.deviceLocation);
+
+        if (string.IsNullOrEmpty(this.deviceEntity))
         {
-            PromptDialog.Confirm(context, AfterConfirming_TurnOn, "Are you sure?", promptStyle: PromptStyle.Auto);
+            await context.PostAsync($"Did not find the object to be turned on.");
+            context.Wait(MessageReceived);
         }
         else
         {
-            await context.PostAsync($"Did not find the object to be turned on: {result.Query}");
-            context.Wait(MessageReceived);
+            if (string.IsNullOrEmpty(this.deviceLocation))
+            {
+                await context.PostAsync($"Did not find the device location.");
+                PromptDialog.Text(context, OnDeviceHomeReply_TurnOn, "where is the device?");
+            }
         }
     }
 
@@ -122,15 +151,28 @@ public class BasicLuisDialog : LuisDialog<object>
     {
         await context.PostAsync($"Your intent: HomeAutomation.TurnOff.");
 
-        if (TryFindEntity(result, "HomeAutomation.Device", out this.deviceEntity))
+        this.deviceEntity = null;
+        this.deviceLocation = null;
+        this.deviceOperation = null;
+
+        TryFindEntity(result, "HomeAutomation.Device", out this.deviceEntity);
+        TryFindEntity(result, "HomeAutomation.Operation", out this.deviceOperation);
+        TryFindEntity(result, "HomeAutomation.Room", out this.deviceLocation);
+
+        if (string.IsNullOrEmpty(this.deviceEntity))
         {
-            PromptDialog.Confirm(context, AfterConfirming_TurnOff, "Are you sure?", promptStyle: PromptStyle.Auto);
+            await context.PostAsync($"Did not find the object to be turned off.");
+            context.Wait(MessageReceived);
         }
         else
         {
-            await context.PostAsync($"Did not find the object to be turned off: {result.Query}");
-            context.Wait(MessageReceived);
+            if (string.IsNullOrEmpty(this.deviceLocation))
+            {
+                await context.PostAsync($"Did not find the device location.");
+                PromptDialog.Text(context, OnDeviceHomeReply_TurnOff, "where is the device?");
+            }
         }
+
     }
     #endregion
 
@@ -143,7 +185,7 @@ public class BasicLuisDialog : LuisDialog<object>
         }
         else
         {
-            await context.PostAsync($"Ok! We haven't turned of {this.deviceEntity}!");
+            await context.PostAsync($"Ok! We haven't turned on {this.deviceEntity}!");
         }
 
         context.Wait(MessageReceived);
@@ -153,14 +195,33 @@ public class BasicLuisDialog : LuisDialog<object>
     {
         if (await confirmation)
         {
-            await context.PostAsync($"Ok, turn off {this.deviceEntity} successfully.");
+            await context.PostAsync($"Ok, turn off {this.deviceEntity} in {this.deviceLocation} successfully.");
         }
         else
         {
-            await context.PostAsync($"Ok! We haven't turned of {this.deviceEntity}!");
+            await context.PostAsync($"Ok! We haven't turned off {this.deviceEntity}!");
         }
 
         context.Wait(MessageReceived);
+    }
+
+    private async Task OnDeviceEntityReply(IDialogContext context, IAwaitable<string> result)
+    {
+        this.deviceEntity = await result;
+
+        PromptDialog.Confirm(context, AfterConfirming_TurnOff, "Are you sure?", promptStyle: PromptStyle.Auto);
+    }
+
+    private async Task OnDeviceHomeReply_TurnOff(IDialogContext context, IAwaitable<string> result)
+    {
+        this.deviceLocation = await result;
+        PromptDialog.Confirm(context, AfterConfirming_TurnOff, $"Are you sure to turn off {this.deviceEntity} in {this.deviceLocation}?", promptStyle: PromptStyle.Auto);
+    }
+
+    private async Task OnDeviceHomeReply_TurnOn(IDialogContext context, IAwaitable<string> result)
+    {
+        this.deviceLocation = await result;
+        PromptDialog.Confirm(context, AfterConfirming_TurnOn, $"Are you sure to turn on {this.deviceEntity} in {this.deviceLocation}?", promptStyle: PromptStyle.Auto);
     }
 
     public async Task<GetCurrentWeatherResponse> GetCurrentWeatherByCityName(string city)
@@ -203,7 +264,7 @@ public class BasicLuisDialog : LuisDialog<object>
         }
         else
         {
-            entityValue = "default";
+            entityValue = string.Empty;
             return false;
         }
     }
