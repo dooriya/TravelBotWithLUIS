@@ -143,6 +143,10 @@ public class BasicLuisDialog : LuisDialog<object>
                 await context.PostAsync($"Did not find the device location.");
                 PromptDialog.Text(context, OnDeviceHomeReply_TurnOn, "where is the device?");
             }
+            else
+            {
+                PromptDialog.Confirm(context, AfterConfirming_TurnOn, "Are you sure?", promptStyle: PromptStyle.None);
+            }
         }
     }
 
@@ -170,6 +174,10 @@ public class BasicLuisDialog : LuisDialog<object>
             {
                 await context.PostAsync($"Did not find the device location.");
                 PromptDialog.Text(context, OnDeviceHomeReply_TurnOff, "where is the device?");
+            }
+            else
+            {
+                PromptDialog.Confirm(context, AfterConfirming_TurnOff, "Are you sure?", promptStyle: PromptStyle.None);
             }
         }
 
