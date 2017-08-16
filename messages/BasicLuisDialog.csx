@@ -145,7 +145,9 @@ public class BasicLuisDialog : LuisDialog<object>
             }
             else
             {
-                PromptDialog.Confirm(context, AfterConfirming_TurnOn, "Are you sure?", promptStyle: PromptStyle.None);
+                //PromptDialog.Confirm(context, AfterConfirming_TurnOn, "Are you sure?", promptStyle: PromptStyle.Auto);
+                await context.PostAsync($"Ok, turn on {this.deviceEntity} successfully.");
+                context.Wait(MessageReceived);
             }
         }
     }
@@ -177,7 +179,7 @@ public class BasicLuisDialog : LuisDialog<object>
             }
             else
             {
-                PromptDialog.Confirm(context, AfterConfirming_TurnOff, "Are you sure?", promptStyle: PromptStyle.None);
+                PromptDialog.Confirm(context, AfterConfirming_TurnOff, "Are you sure?", promptStyle: PromptStyle.Auto);
             }
         }
 
@@ -189,7 +191,7 @@ public class BasicLuisDialog : LuisDialog<object>
     {
         if (await confirmation)
         {
-            await context.PostAsync($"Ok, turn on {this.deviceEntity} successfully.");
+            await context.PostAsync($"Ok, turn on {this.deviceEntity} in {this.deviceLocation} successfully.");
         }
         else
         {
