@@ -2,13 +2,16 @@
 
 using System;
 using System.Linq;
+using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Azure.Devices;
 using Microsoft.Bot.Builder.Azure;
 using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Builder.Luis;
 using Microsoft.Bot.Builder.Luis.Models;
 using Newtonsoft.Json;
-using System.Net.Http;
+
 //using Iveonik.Stemmers;
 
 // For more information about this template visit http://aka.ms/azurebots-csharp-luis
@@ -22,14 +25,18 @@ public class BasicLuisDialog : LuisDialog<object>
     }
     */
 
-    private static readonly string currentWeatherReplyTemplate = "Hello, it's {0} in {1} with temprature {2} degree centigrade.";
-    private static readonly string weatherForecastReplyTemplate = "Hello, for {0}, it'll be {1} in {2}..with low temperature at {3} and high at {4}.";
-    private static readonly string yesWeatherTemplate = "Hi..actually yes, it's {0} in {1}";
-    private static readonly string noWeatherTemplate = "Hi..actually no, it's {0} in {1}";
+    private static readonly string CurrentWeatherReplyTemplate = "Hello, it's {0} in {1} with temprature {2} degree centigrade.";
+    private static readonly string WeatherForecastReplyTemplate = "Hello, for {0}, it'll be {1} in {2}..with low temperature at {3} and high at {4}.";
+    private static readonly string YesWeatherTemplate = "Hi..actually yes, it's {0} in {1}";
+    private static readonly string NoWeatherTemplate = "Hi..actually no, it's {0} in {1}";
 
     private string deviceEntity;
     private string deviceLocation;
     private string deviceOperation;
+
+    private static readonly string IoTHubConnectionString = "HostName=dol-iot-hub.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=AQWXy4/JElSRMLngUJDUu+zYVDzJPU6EM/DXeR9FKCU=";
+    private static readonly ServiceClient serviceClient = ServiceClient.CreateFromConnectionString(IoTHubConnectionString);
+    private static readonly string deviceId = "myDevice1";
 
     #region Intent Handler
     [LuisIntent("None")]
@@ -67,7 +74,7 @@ public class BasicLuisDialog : LuisDialog<object>
         if (TryFindEntity(result, "Weather.Location", out city))
         {
             var weatherResponse = await this.GetCurrentWeatherByCityName(city);
-            string replyMessage = string.Format(currentWeatherReplyTemplate,
+            string replyMessage = string.Format(CurrentWeatherReplyTemplate,
                 weatherResponse.Summary,
                 weatherResponse.City,
                 weatherResponse.Temp);
@@ -102,11 +109,11 @@ public class BasicLuisDialog : LuisDialog<object>
             var weatherResponse = await this.GetCurrentWeatherByCityName(city);
             if (weatherResponse.Summary.IndexOf(condition, StringComparison.OrdinalIgnoreCase) >= 0)
             {
-                replyMessage = string.Format(yesWeatherTemplate, condition, weatherResponse.City);
+                replyMessage = string.Format(YesWeatherTemplate, condition, weatherResponse.City);
             }
             else
             {
-                replyMessage = string.Format(noWeatherTemplate, weatherResponse.Summary, weatherResponse.City);
+                replyMessage = string.Format(NoWeatherTemplate, weatherResponse.Summary, weatherResponse.City);
             }
             await context.PostAsync(replyMessage);
         }
@@ -130,6 +137,7 @@ public class BasicLuisDialog : LuisDialog<object>
         TryFindEntity(result, "HomeAutomation.Device", out this.deviceEntity);
         TryFindEntity(result, "HomeAutomation.Operation", out this.deviceOperation);
         TryFindEntity(result, "HomeAutomation.Room", out this.deviceLocation);
+        await context.PostAsync($"device: {this.deviceEntity}, location: {this.deviceLocation}");
 
         if (string.IsNullOrEmpty(this.deviceEntity))
         {
@@ -138,17 +146,32 @@ public class BasicLuisDialog : LuisDialog<object>
         }
         else
         {
+            /*
             if (string.IsNullOrEmpty(this.deviceLocation))
             {
                 await context.PostAsync($"Did not find the device location.");
                 PromptDialog.Text(context, OnDeviceHomeReply_TurnOn, "where is the device?");
             }
+            */
+
+            if (!string.IsNullOrEmpty(this.deviceLocation)
+                && this.deviceLocation.ToLowerInvariant().Contains("devkit"))
+            {
+                SendCloudToDeviceMessageAsync(deviceId, result.Query);                
+            }
+
+            string replyMesage;
+            if (!string.IsNullOrEmpty(this.deviceLocation))
+            {
+                replyMesage = $"Ok, turn on {this.deviceEntity} in {this.deviceLocation} successfully.";
+            }
             else
             {
-                //PromptDialog.Confirm(context, AfterConfirming_TurnOn, "Are you sure?", promptStyle: PromptStyle.Auto);
-                await context.PostAsync($"Ok, turn on {this.deviceEntity} successfully.");
-                context.Wait(MessageReceived);
+                replyMesage = $"Ok, turn on {this.deviceEntity} successfully.";
             }
+
+            await context.PostAsync(replyMesage);
+            context.Wait(MessageReceived);
         }
     }
 
@@ -182,7 +205,6 @@ public class BasicLuisDialog : LuisDialog<object>
                 PromptDialog.Confirm(context, AfterConfirming_TurnOff, "Are you sure?", promptStyle: PromptStyle.Auto);
             }
         }
-
     }
     #endregion
 
@@ -277,6 +299,14 @@ public class BasicLuisDialog : LuisDialog<object>
             entityValue = string.Empty;
             return false;
         }
+    }
+    #endregion
+
+    #region Device Control
+    private async void SendCloudToDeviceMessageAsync(string deviceName, string message)
+    {
+        var commandMessage = new Message(Encoding.ASCII.GetBytes(message));
+        await serviceClient.SendAsync(deviceName, commandMessage);
     }
     #endregion
 }
