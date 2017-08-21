@@ -125,6 +125,34 @@ public class BasicLuisDialog : LuisDialog<object>
         context.Wait(MessageReceived);
     }
 
+    [LuisIntent("RGBLed.SetColor")]
+    public async Task SetRGBLedColorIntent(IDialogContext context, LuisResult result)
+    {
+        await context.PostAsync($"Your intent: RGBLed.SetColor.");
+
+        string color;
+        this.TryFindEntity(result, "RGBLed.Color", out color);
+        if (!string.IsNullOrEmpty(color))
+        {
+            SendCloudToDeviceMessageAsync(deviceId, $"SetColor:{color.ToLowerInvariant()}");
+        }
+        else
+        {
+            await context.PostAsync($"Cannot find the RGBLed.Color entity from your query.");
+        }
+
+        context.Wait(MessageReceived);
+    }
+
+    [LuisIntent("RGBLed.Off")]
+    public async Task ClearRGBLedColorIntent(IDialogContext context, LuisResult result)
+    {
+        await context.PostAsync($"Your intent: RGBLed.Off.");
+        SendCloudToDeviceMessageAsync(deviceId, "SetColor:none");
+        context.Wait(MessageReceived);
+    }
+
+
     [LuisIntent("HomeAutomation.TurnOn")]
     public async Task HomeAutomationTurnOnIntent(IDialogContext context, LuisResult result)
     {
