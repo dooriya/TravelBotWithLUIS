@@ -25,8 +25,8 @@ public class BasicLuisDialog : LuisDialog<object>
     }
     */
 
-    private static readonly string CurrentWeatherReplyTemplate = "Hello, it's {0} in {1} with temprature {2} degree centigrade.";
-    private static readonly string WeatherForecastReplyTemplate = "Hello, for {0}, it'll be {1} in {2}..with low temperature at {3} and high at {4}.";
+    private static readonly string CurrentWeatherReplyTemplate = "It's {0} in {1} with temprature {2} deg c.";
+    private static readonly string WeatherForecastReplyTemplate = "For {0}, it'll be {1} in {2}..with low temperature at {3} and high at {4}.";
     private static readonly string YesWeatherTemplate = "Hi..actually yes, it's {0} in {1}";
     private static readonly string NoWeatherTemplate = "Hi..actually no, it's {0} in {1}";
 
@@ -79,6 +79,8 @@ public class BasicLuisDialog : LuisDialog<object>
                 weatherResponse.City,
                 weatherResponse.Temp);
             await context.PostAsync(replyMessage);
+
+            SendCloudToDeviceMessageAsync(deviceId, $"GetWeather:{replyMessage}");
         }
         else
         {
@@ -152,6 +154,43 @@ public class BasicLuisDialog : LuisDialog<object>
         context.Wait(MessageReceived);
     }
 
+    [LuisIntent("Sensor.GetStatus")]
+    public async Task GetSensorStatusIntent(IDialogContext context, LuisResult result)
+    {
+        await context.PostAsync($"Your intent: Sensor.GetStatus.");
+
+        string sensorType;
+        this.TryFindEntity(result, "SensorType", out sensorType);
+        if (!string.IsNullOrEmpty(sensorType))
+        {
+            sensorType = sensorType.ToLowerInvariant();
+            switch (sensorType)
+            {
+                case "temperature":
+                case "humidity":
+                    SendCloudToDeviceMessageAsync(deviceId, $"Sensor:HumidTemp");
+                    break;
+                case "pressure":
+                    SendCloudToDeviceMessageAsync(deviceId, $"Sensor:Pressure");
+                    break;
+                case "motion":
+                    SendCloudToDeviceMessageAsync(deviceId, $"Sensor:Motion");
+                    break;
+                case "magnetic":
+                    SendCloudToDeviceMessageAsync(deviceId, $"Sensor:Motion");
+                    break;
+                default:
+                    await context.PostAsync($"Not supported sensor type: {sensorType}");
+                    break;
+            }
+        }
+        else
+        {
+            await context.PostAsync($"Cannot find the SensorType entity from your query.");
+        }
+
+        context.Wait(MessageReceived);
+    }
 
     [LuisIntent("HomeAutomation.TurnOn")]
     public async Task HomeAutomationTurnOnIntent(IDialogContext context, LuisResult result)
