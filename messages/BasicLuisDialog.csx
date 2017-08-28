@@ -84,7 +84,8 @@ public class BasicLuisDialog : LuisDialog<object>
         }
         else
         {
-            await context.PostAsync("Sorry, no information!");
+            //await context.PostAsync("Sorry, no information!");
+            await context.SayAsync(text: "Sorry, no information!", speak: "Sorry, no information!");
         }
 
         context.Wait(MessageReceived);
