@@ -78,7 +78,9 @@ public class BasicLuisDialog : LuisDialog<object>
                 weatherResponse.Summary,
                 weatherResponse.City,
                 weatherResponse.Temp);
-            await context.PostAsync(replyMessage);
+
+            //await context.PostAsync(replyMessage);
+            await context.SayAsync(text: replyMessage, speak: replyMessage);
 
             SendCloudToDeviceMessageAsync(deviceId, $"GetWeather:{replyMessage}");
         }
