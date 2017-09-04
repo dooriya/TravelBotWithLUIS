@@ -61,14 +61,14 @@ public class BasicLuisDialog : LuisDialog<object>
     [LuisIntent("greetings")]
     public async Task GreetingsIntent(IDialogContext context, LuisResult result)
     {
-        await context.PostAsync($"Your intent: greetings.");
+        await context.PostAsync($"Hi, what can I do for you?");
         context.Wait(MessageReceived);
     }
 
     [LuisIntent("Weather.GetForecast")]
     public async Task GetWeatherForecastIntent(IDialogContext context, LuisResult result)
     {
-        await context.PostAsync($"Your intent: Weather.GetForecast.");
+        //await context.PostAsync($"Your intent: Weather.GetForecast.");
 
         string city;
         if (TryFindEntity(result, "Weather.Location", out city))
