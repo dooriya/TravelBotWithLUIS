@@ -42,7 +42,7 @@ public class BasicLuisDialog : LuisDialog<object>
     [LuisIntent("None")]
     public async Task NoneIntent(IDialogContext context, LuisResult result)
     {
-        string message = $"Sorry I did not understand: " + string.Join(", ", result.Intents.Select(i => i.Intent));
+        string message = $"Sorry I did not understand";
         await context.PostAsync(message);
 
         context.Wait(MessageReceived);
@@ -57,11 +57,54 @@ public class BasicLuisDialog : LuisDialog<object>
         context.Wait(MessageReceived);
     }
 
-
     [LuisIntent("greetings")]
     public async Task GreetingsIntent(IDialogContext context, LuisResult result)
     {
-        await context.PostAsync($"Hello?");
+        await context.PostAsync($"Hi there, what can I do for you?");
+        context.Wait(MessageReceived);
+    }
+
+    [LuisIntent("Info.General")]
+    public async Task GeneralInfoIntent(IDialogContext context, LuisResult result)
+    {
+        string replyMessage;
+        string entity;
+        if (TryFindEntity(result, "Info.Keyword", out entity))
+        {
+
+            switch (entity.ToLowerInvariant())
+            {
+                case "yourself":
+                    replyMessage = "Hi, my name is Louis, I'll try to demonstrate the power of LUIS.ai";
+                    break;
+                case "microsoft":
+                    replyMessage = "Microsoft is a big company with lots of awsome products";
+                    break;
+                case "bill gates":
+                    replyMessage = "Bill Gates is a co-founder of the Microsoft Corporation.";
+                    break;
+                case "arthur":
+                    replyMessage = "Oh, Arthur is Windows phone fantastics!";
+                    break;
+                default:
+                    //replyMessage = $"Sorry, I have no information for {entity}";
+                    replyMessage = $"Oh, I love {entity}";
+                    break;
+            }
+        }
+        else
+        {
+            replyMessage = "Sorry, no information!";
+        }
+
+        await context.SayAsync(text: replyMessage, speak: replyMessage);
+        context.Wait(MessageReceived);
+    }
+
+    [LuisIntent("Music.Play")]
+    public async Task PlayMusicIntent(IDialogContext context, LuisResult result)
+    {
+        await context.PostAsync($"Your intent: Music.Play");
         context.Wait(MessageReceived);
     }
 
