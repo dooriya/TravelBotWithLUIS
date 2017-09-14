@@ -75,7 +75,7 @@ public class BasicLuisDialog : LuisDialog<object>
             switch (entity.ToLowerInvariant())
             {
                 case "yourself":
-                    replyMessage = "Hi, my name is Louis, I'll try to demonstrate the power of LUIS.ai";
+                    replyMessage = "My name is Louis, I'll try to demonstrate the power of LUIS.ai";
                     break;
                 case "microsoft":
                     replyMessage = "Microsoft is a big company with lots of awsome products";
