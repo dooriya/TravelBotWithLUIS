@@ -84,11 +84,12 @@ public class BasicLuisDialog : LuisDialog<object>
                     replyMessage = "Bill Gates is a co-founder of the Microsoft Corporation.";
                     break;
                 case "arthur":
-                    replyMessage = "Oh, Arthur is Windows phone fantastics!";
+                case "Asir":
+                    replyMessage = "Yes, Arthur is Windows phone fantastics!";
                     break;
                 default:
                     //replyMessage = $"Sorry, I have no information for {entity}";
-                    replyMessage = $"Oh, I love {entity}";
+                    replyMessage = $"Yes, I love {entity}";
                     break;
             }
         }
