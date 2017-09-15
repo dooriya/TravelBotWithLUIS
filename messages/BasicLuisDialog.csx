@@ -85,6 +85,7 @@ public class BasicLuisDialog : LuisDialog<object>
                     break;
                 case "arthur":
                 case "Asir":
+                case "awesome":
                     replyMessage = "Yes, Arthur is Windows phone fantastics!";
                     break;
                 default:
