@@ -78,7 +78,7 @@ public class BasicLuisDialog : LuisDialog<object>
                     replyMessage = "My name is Louis, I'll try to demonstrate the power of LUIS.ai";
                     break;
                 case "microsoft":
-                    replyMessage = "Microsoft is a big company with lots of awsome products";
+                    replyMessage = "Microsoft is a big company that makes computer software and video games for users around the world. Bill Gates and Paul Allen founded the company in 1975";
                     break;
                 case "bill gates":
                     replyMessage = "Bill Gates is a co-founder of the Microsoft Corporation.";
